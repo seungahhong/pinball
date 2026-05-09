@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import type { GameState, WinMode, SpecialMode } from '@/types/game';
 import type { MapData } from '@/types/game';
 import { maps } from '@/maps';
@@ -43,6 +44,8 @@ export function ControlPanel({
   onResultMessageChange,
   onSpecialModeChange,
 }: ControlPanelProps) {
+  const mapSelectId = useId();
+  const resultMessageId = useId();
   const isRunning = gameState === 'running';
 
   const handleSpecialToggle = (mode: SpecialMode) => {
@@ -53,11 +56,11 @@ export function ControlPanel({
     <div className="flex flex-col gap-4">
       {/* Map selector */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="map-select" className="text-sm font-medium text-[#A0A0B0]">
+        <label htmlFor={mapSelectId} className="text-sm font-medium text-[#A0A0B0]">
           맵 선택
         </label>
         <select
-          id="map-select"
+          id={mapSelectId}
           value={selectedMapIndex}
           onChange={(e) => onMapChange(Number(e.target.value))}
           disabled={isRunning}
@@ -206,11 +209,11 @@ export function ControlPanel({
 
       {/* Result message */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="result-message" className="text-sm font-medium text-[#A0A0B0]">
+        <label htmlFor={resultMessageId} className="text-sm font-medium text-[#A0A0B0]">
           결과 문구
         </label>
         <input
-          id="result-message"
+          id={resultMessageId}
           type="text"
           value={resultMessage}
           onChange={(e) => onResultMessageChange(e.target.value)}

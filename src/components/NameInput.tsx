@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useId } from 'react';
 import type { Participant } from '@/types/game';
 
 interface NameInputProps {
@@ -46,6 +46,8 @@ export function parseNames(input: string): Participant[] {
 }
 
 export function NameInput({ value, onChange, onSubmit, disabled }: NameInputProps) {
+  const inputId = useId();
+  const errorId = useId();
   const [error, setError] = useState('');
 
   const handleSubmit = useCallback(() => {
@@ -62,11 +64,11 @@ export function NameInput({ value, onChange, onSubmit, disabled }: NameInputProp
 
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor="name-input" className="text-sm font-medium text-[#A0A0B0]">
+      <label htmlFor={inputId} className="text-sm font-medium text-[#A0A0B0]">
         참가자 이름 <span className="text-[#00C4B3]">({count}명)</span>
       </label>
       <textarea
-        id="name-input"
+        id={inputId}
         value={value}
         onChange={(e) => {
           onChange(e.target.value);
@@ -77,11 +79,11 @@ export function NameInput({ value, onChange, onSubmit, disabled }: NameInputProp
         className="w-full h-32 p-3 bg-white/5 border border-white/10 rounded-lg text-sm
           placeholder:text-white/20 focus:outline-none focus:border-[#00C4B3]/50
           disabled:opacity-50 resize-none"
-        aria-describedby={error ? 'name-input-error' : undefined}
+        aria-describedby={error ? errorId : undefined}
         aria-invalid={!!error}
       />
       {error && (
-        <p id="name-input-error" className="text-xs text-[#FF4757]" role="alert">
+        <p id={errorId} className="text-xs text-[#FF4757]" role="alert">
           {error}
         </p>
       )}

@@ -139,8 +139,8 @@ export class Renderer {
     // Effect alert
     this.drawEffectAlert(w, h);
 
-    // Minimap
-    if (map) {
+    // Minimap (skip on narrow viewports — e.g., mobile)
+    if (map && this.logicalWidth >= 768) {
       this.drawMinimap(w, h, map, marbles, entityTransforms || []);
     }
 
