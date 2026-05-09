@@ -138,4 +138,109 @@ export class Fanfare {
       now,
     );
   }
+
+  playFlip(): void {
+    if (this.ctx?.state === 'suspended') return;
+    const now = this.ensureContext().currentTime;
+    // Low rumble
+    this.playTone(
+      {
+        type: 'sawtooth',
+        freqStart: 60,
+        freqEnd: 30,
+        freqRampDuration: 0.6,
+        gainStart: 0.15,
+        gainEnd: 0.01,
+        gainRampDuration: 0.8,
+        duration: 0.9,
+      },
+      now,
+    );
+    // Impact crack
+    this.playTone(
+      {
+        type: 'square',
+        freqStart: 300,
+        freqEnd: 50,
+        freqRampDuration: 0.2,
+        gainStart: 0.12,
+        gainEnd: 0.01,
+        gainRampDuration: 0.4,
+        duration: 0.5,
+      },
+      now + 0.1,
+    );
+  }
+
+  playGravityReverse(): void {
+    if (this.ctx?.state === 'suspended') return;
+    const now = this.ensureContext().currentTime;
+    // Ascending sweep
+    this.playTone(
+      {
+        type: 'sine',
+        freqStart: 100,
+        freqEnd: 800,
+        freqRampDuration: 0.6,
+        gainStart: 0.15,
+        gainEnd: 0.01,
+        gainRampDuration: 0.8,
+        duration: 0.9,
+      },
+      now,
+    );
+    // Harmonic shimmer
+    this.playTone(
+      {
+        type: 'triangle',
+        freqStart: 200,
+        freqEnd: 1200,
+        freqRampDuration: 0.5,
+        gainStart: 0.08,
+        gainEnd: 0.01,
+        gainRampDuration: 0.7,
+        duration: 0.8,
+      },
+      now + 0.1,
+    );
+  }
+
+  private ambientOsc: OscillatorNode | null = null;
+  private ambientGain: GainNode | null = null;
+
+  startAmbientLoop(): void {
+    if (this.ambientOsc) return;
+    const ctx = this.ensureContext();
+    if (ctx.state === 'suspended') return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(120, ctx.currentTime);
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.04, ctx.currentTime + 0.5);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    this.ambientOsc = osc;
+    this.ambientGain = gain;
+  }
+
+  stopAmbientLoop(): void {
+    if (!this.ambientOsc || !this.ambientGain) return;
+    const ctx = this.ensureContext();
+    this.ambientGain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    const osc = this.ambientOsc;
+    const gain = this.ambientGain;
+    setTimeout(() => {
+      try {
+        osc.stop();
+      } catch {
+        /* already stopped */
+      }
+      osc.disconnect();
+      gain.disconnect();
+    }, 400);
+    this.ambientOsc = null;
+    this.ambientGain = null;
+  }
 }

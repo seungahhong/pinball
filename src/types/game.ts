@@ -7,6 +7,8 @@ export type GameState = 'idle' | 'ready' | 'running' | 'finished';
 
 export type WinMode = 'first' | 'last' | 'custom';
 
+export type SpecialMode = 'none' | 'mapFlip' | 'gravityReverse';
+
 export interface MarbleData {
   id: number;
   name: string;

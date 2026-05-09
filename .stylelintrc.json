@@ -1,6 +1,7 @@
 {
   "extends": "stylelint-config-standard",
   "rules": {
-    "at-rule-no-unknown": [true, { "ignoreAtRules": ["tailwind", "apply", "layer", "theme"] }]
+    "at-rule-no-unknown": [true, { "ignoreAtRules": ["tailwind", "apply", "layer", "theme"] }],
+    "import-notation": "string"
   }
 }

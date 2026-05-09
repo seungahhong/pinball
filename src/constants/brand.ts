@@ -1,8 +1,8 @@
 export const BRAND = {
-  name: 'WADIZ',
-  teamName: 'FE Team',
+  name: 'Pinball Roulette',
+  teamName: 'Marble Run',
   logo: {
-    text: 'wadiz',
+    text: 'pinball',
     fontSize: 48,
     fontWeight: 800,
     fontFamily: "'Pretendard', 'Arial Black', sans-serif",

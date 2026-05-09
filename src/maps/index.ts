@@ -2,7 +2,7 @@ import { wheelOfFortune } from './classic/wheelOfFortune';
 import { bubblePop } from './classic/bubblePop';
 import { potOfGreed } from './classic/potOfGreed';
 import { yoruNiKakeru } from './classic/yoruNiKakeru';
-import { wadizOriginal } from './wadiz/wadizOriginal';
+import { customMap } from './custom/customMap';
 import type { MapData, MapEntity } from '@/types/game';
 
 const MAP_SCALE = 2.5;
@@ -93,11 +93,11 @@ function extendMapY(map: MapData, scale: number): MapData {
 }
 
 export const maps: MapData[] = [
-  extendMapY(wadizOriginal, MAP_SCALE),
+  extendMapY(customMap, MAP_SCALE),
   extendMapY(wheelOfFortune, MAP_SCALE),
   extendMapY(bubblePop, MAP_SCALE),
   extendMapY(potOfGreed, MAP_SCALE),
   extendMapY(yoruNiKakeru, MAP_SCALE),
 ];
 
-export { wadizOriginal, wheelOfFortune, bubblePop, potOfGreed, yoruNiKakeru };
+export { customMap, wheelOfFortune, bubblePop, potOfGreed, yoruNiKakeru };

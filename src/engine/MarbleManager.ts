@@ -8,6 +8,9 @@ interface ManagedMarble {
   physicsId: number;
   radius: number;
   finished: boolean;
+  stuckPos: { x: number; y: number };
+  stuckSince: number;
+  nudgeCount: number;
 }
 
 export class MarbleManager {
@@ -40,6 +43,9 @@ export class MarbleManager {
         physicsId,
         radius,
         finished: false,
+        stuckPos: { x, y },
+        stuckSince: Date.now(),
+        nudgeCount: 0,
       });
     });
   }
@@ -87,27 +93,30 @@ export class MarbleManager {
     return { idA: a.data.id, idB: b.data.id, nameA: a.data.name, nameB: b.data.name };
   }
 
-  getLeadMarble(_goalY?: number): ManagedMarble | null {
+  getLeadMarble(_goalY?: number, reversed = false): ManagedMarble | null {
     let leader: ManagedMarble | null = null;
-    let maxY = -Infinity;
+    let bestY = reversed ? Infinity : -Infinity;
 
     for (const m of this.marbles) {
       if (m.finished) continue;
       const pos = this.physics.getMarblePosition(m.physicsId);
-      if (pos && pos.y > maxY) {
-        maxY = pos.y;
+      if (!pos) continue;
+      if (reversed ? pos.y < bestY : pos.y > bestY) {
+        bestY = pos.y;
         leader = m;
       }
     }
     return leader;
   }
 
-  checkGoals(goalY: number): ManagedMarble[] {
+  checkGoals(goalY: number, reversed = false): ManagedMarble[] {
     const reached: ManagedMarble[] = [];
     for (const m of this.marbles) {
       if (m.finished) continue;
       const pos = this.physics.getMarblePosition(m.physicsId);
-      if (pos && pos.y + m.radius >= goalY) {
+      if (!pos) continue;
+      const crossed = reversed ? pos.y - m.radius <= goalY : pos.y + m.radius >= goalY;
+      if (crossed) {
         m.finished = true;
         reached.push(m);
       }
@@ -117,6 +126,37 @@ export class MarbleManager {
 
   scheduleRemoval(physicsId: number): void {
     setTimeout(() => this.physics.removeMarble(physicsId), 500);
+  }
+
+  /**
+   * Detect marbles that haven't moved meaningfully for `thresholdMs` and
+   * apply a nudge impulse so they cannot be permanently trapped by obstacles.
+   * `goalDirY = +1` for downward goal, `-1` for upward goal (gravity reverse).
+   */
+  nudgeStuck(thresholdMs: number, goalDirY: number, now: number): void {
+    const minMove = 0.5;
+    for (const m of this.marbles) {
+      if (m.finished) continue;
+      const pos = this.physics.getMarblePosition(m.physicsId);
+      if (!pos) continue;
+      const dx = pos.x - m.stuckPos.x;
+      const dy = pos.y - m.stuckPos.y;
+      if (Math.hypot(dx, dy) > minMove) {
+        m.stuckPos = { x: pos.x, y: pos.y };
+        m.stuckSince = now;
+        m.nudgeCount = 0;
+        continue;
+      }
+      if (now - m.stuckSince < thresholdMs) continue;
+      m.nudgeCount += 1;
+      const escalation = Math.min(m.nudgeCount, 6);
+      const vx = (Math.random() - 0.5) * (4 + escalation * 2);
+      const baseVy = 3 + Math.random() * 4 + escalation * 2;
+      const vy = goalDirY * baseVy;
+      this.physics.applyImpulseToMarble(m.physicsId, vx, vy);
+      m.stuckPos = { x: pos.x, y: pos.y };
+      m.stuckSince = now;
+    }
   }
 
   allFinished(): boolean {

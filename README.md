@@ -5,14 +5,10 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 First, run the development server:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
 pnpm dev
-# or
-bun dev
 ```
+
+이 프로젝트는 **pnpm**을 사용합니다 (`packageManager: pnpm@10.33.0`). 첫 셋업 시 `pnpm install`.
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 

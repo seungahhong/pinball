@@ -1,6 +1,6 @@
 'use client';
 
-import type { GameState, WinMode } from '@/types/game';
+import type { GameState, WinMode, SpecialMode } from '@/types/game';
 import type { MapData } from '@/types/game';
 import { maps } from '@/maps';
 
@@ -12,6 +12,7 @@ interface ControlPanelProps {
   switchEnabled: boolean;
   obstacleEnabled: boolean;
   resultMessage: string;
+  specialMode: SpecialMode;
   onWinModeChange: (mode: WinMode) => void;
   onCustomRankChange: (rank: number) => void;
   onMapChange: (index: number) => void;
@@ -20,6 +21,7 @@ interface ControlPanelProps {
   onSwitchToggle: (enabled: boolean) => void;
   onObstacleToggle: (enabled: boolean) => void;
   onResultMessageChange: (message: string) => void;
+  onSpecialModeChange: (mode: SpecialMode) => void;
 }
 
 export function ControlPanel({
@@ -30,6 +32,7 @@ export function ControlPanel({
   switchEnabled,
   obstacleEnabled,
   resultMessage,
+  specialMode,
   onWinModeChange,
   onCustomRankChange,
   onMapChange,
@@ -38,8 +41,13 @@ export function ControlPanel({
   onSwitchToggle,
   onObstacleToggle,
   onResultMessageChange,
+  onSpecialModeChange,
 }: ControlPanelProps) {
   const isRunning = gameState === 'running';
+
+  const handleSpecialToggle = (mode: SpecialMode) => {
+    onSpecialModeChange(specialMode === mode ? 'none' : mode);
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -131,6 +139,70 @@ export function ControlPanel({
           <span className="text-sm">동적 장애물</span>
         </label>
       </div>
+
+      {/* Special effects — 2/3 지점 특수 효과 */}
+      <fieldset className="flex flex-col gap-2" role="group" aria-label="특수 효과 선택">
+        <legend className="text-sm font-medium text-[#A0A0B0]">
+          특수 효과
+          <span className="ml-1.5 text-[10px] text-white/30 font-normal">2/3 지점 자동 발동</span>
+        </legend>
+
+        {(
+          [
+            {
+              mode: 'mapFlip' as SpecialMode,
+              label: '맵 뒤집기',
+              desc: '산사태 흔들림 + 맵 상하 반전',
+              activeBtn:
+                'bg-[#FF6B35]/10 border-[#FF6B35]/60 shadow-[0_0_12px_rgba(255,107,53,0.15)]',
+              activeDot: 'border-[#FF6B35] bg-[#FF6B35]',
+            },
+            {
+              mode: 'gravityReverse' as SpecialMode,
+              label: '중력 거스리기',
+              desc: '흡입 효과 + 중력 반전 + 효과음',
+              activeBtn:
+                'bg-[#A78BFA]/10 border-[#A78BFA]/60 shadow-[0_0_12px_rgba(167,139,250,0.15)]',
+              activeDot: 'border-[#A78BFA] bg-[#A78BFA]',
+            },
+          ] as const
+        ).map(({ mode, label, desc, activeBtn, activeDot }) => {
+          const active = specialMode === mode;
+          return (
+            <button
+              key={mode}
+              type="button"
+              aria-pressed={active}
+              disabled={isRunning}
+              onClick={() => handleSpecialToggle(mode)}
+              className={`group relative w-full p-3 rounded-lg border text-left transition-all duration-200
+                ${
+                  active
+                    ? activeBtn
+                    : 'bg-white/[0.03] border-white/10 hover:border-white/20 hover:bg-white/[0.05]'
+                }
+                disabled:opacity-40 disabled:cursor-not-allowed`}
+            >
+              <div className="flex items-center gap-2.5">
+                <span
+                  className={`flex items-center justify-center w-4 h-4 rounded-full border-2 transition-colors
+                    ${active ? activeDot : 'border-white/30 bg-transparent'}`}
+                >
+                  {active && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-semibold" aria-hidden="true">
+                      {label}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-white/40 mt-0.5 leading-tight">{desc}</p>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </fieldset>
 
       {/* Result message */}
       <div className="flex flex-col gap-1.5">

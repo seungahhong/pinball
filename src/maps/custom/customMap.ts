@@ -1,13 +1,13 @@
 import type { MapData } from '@/types/game';
 import { tokens } from '@/styles/tokens';
 
-export const wadizOriginal: MapData = {
-  title: 'WADIZ FE Challenge',
+export const customMap: MapData = {
+  title: 'Custom Pinball',
   goalY: 57.5,
   zoomY: 45,
   spawnArea: { x: -4, y: -6, width: 8, height: 3 },
   entities: [
-    // Walls - wadiz mint colored
+    // Walls
     {
       shape: 'polyline',
       type: 'static',
@@ -38,7 +38,7 @@ export const wadizOriginal: MapData = {
         [8, 58],
       ],
     },
-    // "W" deflectors (wide gaps for larger balls)
+    // Top deflectors (wide gaps for larger balls)
     {
       shape: 'polyline',
       type: 'static',
@@ -69,7 +69,7 @@ export const wadizOriginal: MapData = {
         [5, 3],
       ],
     },
-    // Bouncy bumpers in mint
+    // Bouncy bumpers
     ...Array.from({ length: 3 }, (_, i) => ({
       shape: 'circle' as const,
       type: 'static' as const,
@@ -177,7 +177,6 @@ export const wadizOriginal: MapData = {
         [1.5, 50],
       ],
     },
-    // Teeth inside funnel (positioned to not block larger balls)
     {
       shape: 'box',
       type: 'static',

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import type { Participant, MarbleData, WinMode } from '@/types/game';
+import type { Participant, MarbleData, WinMode, SpecialMode } from '@/types/game';
 import { maps } from '@/maps';
 import { tokens } from '@/styles/tokens';
 import { useGameEngine } from '@/hooks/useGameEngine';
@@ -21,6 +21,7 @@ export default function Home() {
   const [switchEnabled, setSwitchEnabled] = useState(true);
   const [obstacleEnabled, setObstacleEnabled] = useState(true);
   const [resultMessage, setResultMessage] = useState('');
+  const [specialMode, setSpecialMode] = useState<SpecialMode>('none');
 
   const {
     canvasRef,
@@ -36,6 +37,9 @@ export default function Home() {
     setTheme,
     setSwitchEnabled: setEngineSwitchEnabled,
     setObstacleEnabled: setEngineObstacleEnabled,
+    setSpecialMode: setEngineSpecialMode,
+    isShaking,
+    isFlipping,
     scrollCamera,
     zoomCamera,
   } = useGameEngine();
@@ -104,6 +108,14 @@ export default function Home() {
     [setEngineObstacleEnabled],
   );
 
+  const handleSpecialModeChange = useCallback(
+    (mode: SpecialMode) => {
+      setSpecialMode(mode);
+      setEngineSpecialMode(mode);
+    },
+    [setEngineSpecialMode],
+  );
+
   const handleReset = useCallback(() => {
     handleMapChange(selectedMapIndex);
   }, [handleMapChange, selectedMapIndex]);
@@ -137,6 +149,8 @@ export default function Home() {
             onObstacleToggle={handleObstacleToggle}
             resultMessage={resultMessage}
             onResultMessageChange={setResultMessage}
+            specialMode={specialMode}
+            onSpecialModeChange={handleSpecialModeChange}
           />
         </aside>
 
@@ -146,6 +160,8 @@ export default function Home() {
             ref={canvasRef}
             isLoading={isLoading}
             error={error}
+            isShaking={isShaking}
+            isFlipping={isFlipping}
             onScroll={scrollCamera}
             onZoom={zoomCamera}
           />

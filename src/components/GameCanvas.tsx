@@ -5,12 +5,14 @@ import { forwardRef, useEffect, useRef, useCallback } from 'react';
 interface GameCanvasProps {
   isLoading: boolean;
   error: string | null;
+  isShaking?: boolean;
+  isFlipping?: boolean;
   onScroll?: (deltaY: number) => void;
   onZoom?: (delta: number) => void;
 }
 
 export const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>(function GameCanvas(
-  { isLoading, error, onScroll, onZoom },
+  { isLoading, error, isShaking, isFlipping, onScroll, onZoom },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -41,7 +43,10 @@ export const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>(functio
       role="img"
       aria-label="핀볼 게임 화면"
     >
-      <canvas ref={ref} className="w-full h-full block" />
+      <canvas
+        ref={ref}
+        className={`w-full h-full block ${isShaking ? 'shake-effect' : ''} ${isFlipping ? 'flip-effect' : ''}`}
+      />
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-[#1A1A2E]">
           <div className="flex flex-col items-center gap-3">

@@ -37,6 +37,9 @@ export type GameEvents = {
   'marble:switch': { idA: number; idB: number; nameA: string; nameB: string };
   'obstacle:spawn': import('@/types/game').ObstacleEvent;
   'obstacle:remove': { id: string };
+  'effect:shake': void;
+  'effect:mapFlip': void;
+  'effect:gravityReverse': void;
 };
 
 export const gameEvents = new EventBus<GameEvents>();

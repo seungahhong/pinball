@@ -11,7 +11,11 @@ interface ResultOverlayProps {
   onReset: () => void;
 }
 
-function getDisplayWinners(winners: GoalEvent[], winMode: WinMode, customRank: number): GoalEvent[] {
+function getDisplayWinners(
+  winners: GoalEvent[],
+  winMode: WinMode,
+  customRank: number,
+): GoalEvent[] {
   if (winners.length === 0) return [];
   switch (winMode) {
     case 'first':
@@ -23,11 +27,19 @@ function getDisplayWinners(winners: GoalEvent[], winMode: WinMode, customRank: n
   }
 }
 
-export function ResultOverlay({ gameState, winners, winMode, customRank, resultMessage, onReset }: ResultOverlayProps) {
+export function ResultOverlay({
+  gameState,
+  winners,
+  winMode,
+  customRank,
+  resultMessage,
+  onReset,
+}: ResultOverlayProps) {
   if (gameState !== 'finished' || winners.length === 0) return null;
 
   const displayWinners = getDisplayWinners(winners, winMode, customRank);
-  const modeLabel = winMode === 'first' ? '첫 번째 도착' : winMode === 'last' ? '마지막 도착' : `${customRank}등`;
+  const modeLabel =
+    winMode === 'first' ? '첫 번째 도착' : winMode === 'last' ? '마지막 도착' : `${customRank}등`;
 
   return (
     <div

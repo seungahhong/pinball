@@ -1,7 +1,13 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  turbopack: {},
+  turbopack: {
+    root: process.cwd(),
+    resolveAlias: {
+      fs: { browser: './empty.ts' },
+      path: { browser: './empty.ts' },
+    },
+  },
   webpack: (config, { isServer }) => {
     config.experiments = {
       ...config.experiments,

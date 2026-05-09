@@ -187,6 +187,41 @@ export class PhysicsWorld {
     this.removeBody(id);
   }
 
+  setGravity(x: number, y: number): void {
+    const g = new this.Box2D.b2Vec2(x, y);
+    this.world.SetGravity(g);
+  }
+
+  pauseMarbles(): void {
+    for (const [, body] of this.bodies) {
+      body.SetLinearVelocity(new this.Box2D.b2Vec2(0, 0));
+      body.SetAngularVelocity(0);
+      body.SetAwake(false);
+    }
+  }
+
+  resumeMarbles(): void {
+    for (const [, body] of this.bodies) {
+      body.SetAwake(true);
+    }
+  }
+
+  applyImpulseToAllMarbles(vx: number, vy: number): void {
+    for (const [, body] of this.bodies) {
+      body.SetAwake(true);
+      const vel = body.GetLinearVelocity();
+      body.SetLinearVelocity(new this.Box2D.b2Vec2(vel.get_x() + vx, vy));
+    }
+  }
+
+  applyImpulseToMarble(id: number, vx: number, vy: number): void {
+    const body = this.bodies.get(id);
+    if (!body) return;
+    body.SetAwake(true);
+    const vel = body.GetLinearVelocity();
+    body.SetLinearVelocity(new this.Box2D.b2Vec2(vel.get_x() + vx, vel.get_y() + vy));
+  }
+
   step(dt: number): void {
     this.world.Step(dt, 6, 2);
   }

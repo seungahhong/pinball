@@ -12,6 +12,8 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T)
     try {
       const item = window.localStorage.getItem(key);
       if (item) {
+        // Hydration-safe: server renders with initialValue, client updates after hydration.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setStoredValue(JSON.parse(item));
       }
     } catch {

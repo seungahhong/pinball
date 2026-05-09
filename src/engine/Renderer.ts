@@ -33,7 +33,17 @@ export class Renderer {
   private logicalHeight = 0;
   private frameCount = 0;
   private switchAlert: { text: string; startTime: number } | null = null;
+  private effectAlert: { text: string; color: string; startTime: number } | null = null;
   private static readonly SWITCH_ALERT_DURATION = 3000;
+  private static readonly EFFECT_ALERT_DURATION = 2500;
+
+  /** Compute fade-in / hold / fade-out alpha for a timed alert. */
+  private static alertAlpha(progress: number, fadeIn: number, fadeOut: number): number {
+    if (progress < fadeIn) return progress / fadeIn;
+    if (progress > 1 - fadeOut) return (1 - progress) / fadeOut;
+    return 1;
+  }
+  directionReversed = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -50,6 +60,10 @@ export class Renderer {
       text: `이름 랜덤 변경!\n${nameA} ↔ ${nameB}`,
       startTime: Date.now(),
     };
+  }
+
+  showEffectAlert(text: string, color: string): void {
+    this.effectAlert = { text, color, startTime: Date.now() };
   }
 
   resize(): void {
@@ -89,7 +103,7 @@ export class Renderer {
     // Map entities
     if (map) {
       this.drawEntities(map.entities, entityTransforms || []);
-      this.drawGoalLine(map.goalY, map);
+      this.drawGoalLine(map.goalY);
     }
 
     // Dynamic obstacles
@@ -122,6 +136,9 @@ export class Renderer {
     // Switch alert
     this.drawSwitchAlert(w, h);
 
+    // Effect alert
+    this.drawEffectAlert(w, h);
+
     // Minimap
     if (map) {
       this.drawMinimap(w, h, map, marbles, entityTransforms || []);
@@ -143,16 +160,7 @@ export class Renderer {
 
     const { ctx } = this;
     const progress = elapsed / Renderer.SWITCH_ALERT_DURATION;
-
-    // Fade in for first 20%, stay, fade out for last 30%
-    let alpha: number;
-    if (progress < 0.2) {
-      alpha = progress / 0.2;
-    } else if (progress > 0.7) {
-      alpha = (1 - progress) / 0.3;
-    } else {
-      alpha = 1;
-    }
+    const alpha = Renderer.alertAlpha(progress, 0.2, 0.3);
 
     // Scale: pop in then settle
     const scale = progress < 0.15 ? 0.5 + (progress / 0.15) * 0.5 : 1;
@@ -377,18 +385,20 @@ export class Renderer {
     ctx.restore();
   }
 
-  private drawGoalLine(goalY: number, map: MapData): void {
+  private drawGoalLine(goalY: number): void {
     const { ctx } = this;
     const pulse = 0.5 + 0.5 * Math.sin(this.frameCount * 0.05);
     const leftWall = -10;
     const rightWall = 10;
+    const reversed = this.directionReversed;
 
     ctx.save();
 
     // Glowing goal line
-    ctx.shadowColor = tokens.color.accent;
+    const goalColor = reversed ? '#A78BFA' : tokens.color.accent;
+    ctx.shadowColor = goalColor;
     ctx.shadowBlur = 8 + pulse * 6;
-    ctx.strokeStyle = tokens.color.accent;
+    ctx.strokeStyle = goalColor;
     ctx.lineWidth = 0.15;
     ctx.globalAlpha = 0.6 + pulse * 0.4;
 
@@ -401,33 +411,86 @@ export class Renderer {
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 0.3 + pulse * 0.2;
     ctx.setLineDash([0.5, 0.3]);
-    ctx.strokeStyle = tokens.color.accent;
+    ctx.strokeStyle = goalColor;
     ctx.lineWidth = 0.08;
+    const dashY = reversed ? goalY + 0.5 : goalY - 0.5;
     ctx.beginPath();
-    ctx.moveTo(leftWall, goalY - 0.5);
-    ctx.lineTo(rightWall, goalY - 0.5);
+    ctx.moveTo(leftWall, dashY);
+    ctx.lineTo(rightWall, dashY);
     ctx.stroke();
     ctx.setLineDash([]);
 
     // "GOAL" label
     ctx.globalAlpha = 0.7 + pulse * 0.3;
-    ctx.fillStyle = tokens.color.accent;
+    ctx.fillStyle = goalColor;
     ctx.font = `bold 1px ${BRAND.logo.fontFamily}`;
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText('GOAL', 0, goalY - 0.8);
+    ctx.textBaseline = reversed ? 'top' : 'bottom';
+    ctx.fillText('GOAL', 0, reversed ? goalY + 0.8 : goalY - 0.8);
 
-    // Small arrows pointing down
+    // Small arrows
     const arrowSpacing = 3;
     for (let x = leftWall + 2; x < rightWall; x += arrowSpacing) {
       ctx.beginPath();
-      ctx.moveTo(x - 0.3, goalY - 0.6);
-      ctx.lineTo(x, goalY - 0.2);
-      ctx.lineTo(x + 0.3, goalY - 0.6);
-      ctx.strokeStyle = tokens.color.accent;
+      if (reversed) {
+        // Arrows pointing up
+        ctx.moveTo(x - 0.3, goalY + 0.6);
+        ctx.lineTo(x, goalY + 0.2);
+        ctx.lineTo(x + 0.3, goalY + 0.6);
+      } else {
+        // Arrows pointing down
+        ctx.moveTo(x - 0.3, goalY - 0.6);
+        ctx.lineTo(x, goalY - 0.2);
+        ctx.lineTo(x + 0.3, goalY - 0.6);
+      }
+      ctx.strokeStyle = goalColor;
       ctx.lineWidth = 0.08;
       ctx.stroke();
     }
+
+    ctx.restore();
+  }
+
+  private drawEffectAlert(w: number, h: number): void {
+    if (!this.effectAlert) return;
+    const elapsed = Date.now() - this.effectAlert.startTime;
+    if (elapsed > Renderer.EFFECT_ALERT_DURATION) {
+      this.effectAlert = null;
+      return;
+    }
+
+    const { ctx } = this;
+    const progress = elapsed / Renderer.EFFECT_ALERT_DURATION;
+    const alpha = Renderer.alertAlpha(progress, 0.15, 0.3);
+
+    const scale = progress < 0.1 ? 0.6 + (progress / 0.1) * 0.4 : 1;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    const bannerH = 70;
+    const bannerY = h * 0.25 - bannerH / 2;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.beginPath();
+    ctx.roundRect(w * 0.15, bannerY, w * 0.7, bannerH, 16);
+    ctx.fill();
+
+    ctx.strokeStyle = this.effectAlert.color;
+    ctx.lineWidth = 2;
+    ctx.shadowColor = this.effectAlert.color;
+    ctx.shadowBlur = 16;
+    ctx.beginPath();
+    ctx.roundRect(w * 0.15, bannerY, w * 0.7, bannerH, 16);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.translate(w / 2, h * 0.25);
+    ctx.scale(scale, scale);
+    ctx.font = `bold 26px ${BRAND.logo.fontFamily}`;
+    ctx.fillStyle = this.effectAlert.color;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(this.effectAlert.text, 0, 0);
 
     ctx.restore();
   }

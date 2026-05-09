@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useCallback, useState } from 'react';
-import type { GameState, MarbleData, MapData, WinMode, GoalEvent } from '@/types/game';
+import type { GameState, MarbleData, MapData, WinMode, GoalEvent, SpecialMode } from '@/types/game';
 import { GameLoop } from '@/engine/GameLoop';
 import { gameEvents } from '@/engine/EventBus';
 import { Fanfare } from '@/audio/Fanfare';
@@ -12,6 +12,8 @@ interface UseGameEngineReturn {
   winners: GoalEvent[];
   isLoading: boolean;
   error: string | null;
+  isShaking: boolean;
+  isFlipping: boolean;
   setMap: (map: MapData) => void;
   setMarbles: (data: MarbleData[]) => void;
   start: () => void;
@@ -21,6 +23,7 @@ interface UseGameEngineReturn {
   setTheme: (dark: boolean) => void;
   setSwitchEnabled: (enabled: boolean) => void;
   setObstacleEnabled: (enabled: boolean) => void;
+  setSpecialMode: (mode: SpecialMode) => void;
   scrollCamera: (deltaY: number) => void;
   zoomCamera: (delta: number) => void;
 }
@@ -35,6 +38,8 @@ export function useGameEngine(): UseGameEngineReturn {
   const [winners, setWinners] = useState<GoalEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isShaking, setIsShaking] = useState(false);
+  const [isFlipping, setIsFlipping] = useState(false);
 
   useEffect(() => {
     if (initRef.current || !canvasRef.current) return;
@@ -53,8 +58,15 @@ export function useGameEngine(): UseGameEngineReturn {
         setIsLoading(false);
       });
 
+    if (process.env.NODE_ENV !== 'production') {
+      (window as unknown as { __gameEngine?: GameLoop }).__gameEngine = engine;
+    }
+
     const unsubState = gameEvents.on('game:stateChange', ({ state }) => {
       setGameState(state);
+      if (state === 'finished') {
+        fanfareRef.current?.stopAmbientLoop();
+      }
     });
 
     const unsubGoal = gameEvents.on('goal:reached', (event) => {
@@ -69,6 +81,22 @@ export function useGameEngine(): UseGameEngineReturn {
       fanfareRef.current?.playSwitch();
     });
 
+    const unsubShake = gameEvents.on('effect:shake', () => {
+      setIsShaking(true);
+      fanfareRef.current?.playFlip();
+      setTimeout(() => setIsShaking(false), 600);
+    });
+
+    const unsubFlip = gameEvents.on('effect:mapFlip', () => {
+      setIsFlipping(true);
+      setTimeout(() => setIsFlipping(false), 1400);
+    });
+
+    const unsubGravity = gameEvents.on('effect:gravityReverse', () => {
+      fanfareRef.current?.playGravityReverse();
+      fanfareRef.current?.startAmbientLoop();
+    });
+
     const handleResize = () => engine.resize();
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(canvas);
@@ -78,6 +106,10 @@ export function useGameEngine(): UseGameEngineReturn {
       unsubGoal();
       unsubFinished();
       unsubSwitch();
+      unsubFlip();
+      unsubShake();
+      unsubGravity();
+      fanfareRef.current?.stopAmbientLoop();
       resizeObserver.disconnect();
       engine.destroy();
       initRef.current = false;
@@ -86,12 +118,14 @@ export function useGameEngine(): UseGameEngineReturn {
 
   const setMap = useCallback((map: MapData) => {
     engineRef.current?.setMap(map);
+    fanfareRef.current?.stopAmbientLoop();
     setWinners([]);
   }, []);
 
   const setMarbles = useCallback((data: MarbleData[]) => {
     fanfareRef.current?.resume();
     engineRef.current?.setMarbles(data);
+    fanfareRef.current?.stopAmbientLoop();
     setWinners([]);
   }, []);
 
@@ -123,6 +157,10 @@ export function useGameEngine(): UseGameEngineReturn {
     engineRef.current?.setObstacleEnabled(enabled);
   }, []);
 
+  const setSpecialMode = useCallback((mode: SpecialMode) => {
+    engineRef.current?.setSpecialMode(mode);
+  }, []);
+
   const scrollCamera = useCallback((deltaY: number) => {
     engineRef.current?.scrollCamera(deltaY);
   }, []);
@@ -137,6 +175,8 @@ export function useGameEngine(): UseGameEngineReturn {
     winners,
     isLoading,
     error,
+    isShaking,
+    isFlipping,
     setMap,
     setMarbles,
     start,
@@ -146,6 +186,7 @@ export function useGameEngine(): UseGameEngineReturn {
     setTheme,
     setSwitchEnabled,
     setObstacleEnabled,
+    setSpecialMode,
     scrollCamera,
     zoomCamera,
   };

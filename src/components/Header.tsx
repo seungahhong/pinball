@@ -10,11 +10,11 @@ export function Header({ isDark, onToggleTheme }: HeaderProps) {
     <header className="flex items-center justify-between px-6 py-3 border-b border-white/10">
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-extrabold tracking-tight">
-          <span className="text-[#00C4B3]">wadiz</span>
-          <span className="text-[#A0A0B0] font-normal text-lg ml-2">FE Team</span>
+          <span className="text-[#00C4B3]">pinball</span>
+          <span className="text-[#A0A0B0] font-normal text-lg ml-2">Roulette</span>
         </h1>
         <span className="text-xs text-[#A0A0B0] bg-white/5 px-2 py-0.5 rounded-full">
-          Pinball Roulette
+          Marble Run
         </span>
       </div>
       <button

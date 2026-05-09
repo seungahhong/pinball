@@ -105,12 +105,13 @@ export const yoruNiKakeru: MapData = {
       color: tokens.color.primary,
       props: { angularVelocity: -1.2 },
     },
-    // Level 4 - gradient circles
+    // Level 4 - gradient circles (spacing widened so a 0.5-radius marble can
+    // pass between any two adjacent circles even with the largest radii)
     ...Array.from({ length: 5 }, (_, i) => ({
       shape: 'circle' as const,
       type: 'static' as const,
-      position: [-4 + i * 2, 32 + (i % 2) * 2] as [number, number],
-      radius: 0.8 + i * 0.2,
+      position: [-6 + i * 3, 32 + (i % 2) * 2] as [number, number],
+      radius: 0.5 + i * 0.2,
       color: `hsl(${170 + i * 30}, 70%, 50%)`,
     })),
     // Level 5 - more pegs

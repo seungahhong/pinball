@@ -8,11 +8,11 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: 'WADIZ FE Team Pinball Roulette',
-  description: '와디즈 FE팀 전용 핀볼-사다리 마블 룰렛 게임',
+  title: 'Pinball Roulette',
+  description: '핀볼-사다리 마블 룰렛 게임',
   openGraph: {
-    title: 'WADIZ FE Team Pinball Roulette',
-    description: '와디즈 FE팀 전용 핀볼-사다리 마블 룰렛 게임',
+    title: 'Pinball Roulette',
+    description: '핀볼-사다리 마블 룰렛 게임',
     type: 'website',
   },
 };
