@@ -595,23 +595,20 @@ export class GameLoop {
     if (!this.map || marbles.length === 0) return;
 
     if (this.isGravityReversed) {
-      // Show centroid of ALL marbles with wider zoom
-      let sumX = 0;
-      let sumY = 0;
-      let minY = Infinity;
+      // Follow the topmost (smallest y) marble in real-time — mirrors the
+      // normal-gravity case which targets the bottommost marble.
+      let leadX = marbles[0].x;
+      let leadY = marbles[0].y;
       for (const m of marbles) {
-        sumX += m.x;
-        sumY += m.y;
-        if (m.y < minY) minY = m.y;
+        if (m.y < leadY) {
+          leadY = m.y;
+          leadX = m.x;
+        }
       }
-      const centerX = sumX / marbles.length;
-      const centerY = sumY / marbles.length;
-      // Bias toward the leading (topmost) marble
-      const targetY = centerY * 0.6 + minY * 0.4;
       const ogGoalY = this.originalMap?.goalY ?? this.map.goalY;
-      const zoomProgress = Math.min((ogGoalY - minY) / ogGoalY, 1);
-      const zoom = 18 + zoomProgress * 10;
-      this.renderer.camera.setTarget(centerX, targetY, zoom);
+      const zoomProgress = Math.min(Math.max((ogGoalY - leadY) / ogGoalY, 0), 1);
+      const zoom = 25 + zoomProgress * 15;
+      this.renderer.camera.setTarget(leadX, leadY, zoom);
     } else {
       let maxY = -Infinity;
       let leadX = 0;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useId } from 'react';
+import { useId, useRef, useState } from 'react';
 import type { GameState, WinMode, SpecialMode } from '@/types/game';
 import type { MapData } from '@/types/game';
 import { maps } from '@/maps';
@@ -9,6 +9,7 @@ interface ControlPanelProps {
   gameState: GameState;
   winMode: WinMode;
   customRank: number;
+  participantCount: number;
   selectedMapIndex: number;
   switchEnabled: boolean;
   obstacleEnabled: boolean;
@@ -29,6 +30,7 @@ export function ControlPanel({
   gameState,
   winMode,
   customRank,
+  participantCount,
   selectedMapIndex,
   switchEnabled,
   obstacleEnabled,
@@ -47,6 +49,37 @@ export function ControlPanel({
   const mapSelectId = useId();
   const resultMessageId = useId();
   const isRunning = gameState === 'running';
+  const isRegistered = participantCount > 0;
+
+  const [rankInput, setRankInput] = useState(String(customRank));
+  const [lastSyncedRank, setLastSyncedRank] = useState(customRank);
+  const rankInputRef = useRef<HTMLInputElement>(null);
+  if (lastSyncedRank !== customRank) {
+    setLastSyncedRank(customRank);
+    setRankInput(String(customRank));
+  }
+
+  const handleRankFocus = () => {
+    if (!isRegistered) {
+      window.alert('참가자를 먼저 등록해주세요.');
+      rankInputRef.current?.blur();
+    }
+  };
+
+  const commitRank = () => {
+    if (!isRegistered) {
+      setRankInput(String(customRank));
+      return;
+    }
+    const parsed = parseInt(rankInput, 10);
+    if (!Number.isFinite(parsed) || parsed < 1 || parsed > participantCount) {
+      setRankInput(String(customRank));
+      return;
+    }
+    if (parsed !== customRank) {
+      onCustomRankChange(parsed);
+    }
+  };
 
   const handleSpecialToggle = (mode: SpecialMode) => {
     onSpecialModeChange(specialMode === mode ? 'none' : mode);
@@ -106,14 +139,22 @@ export function ControlPanel({
         </div>
         {winMode === 'custom' && (
           <input
-            type="number"
-            min={1}
-            value={customRank}
-            onChange={(e) => onCustomRankChange(Math.max(1, Number(e.target.value)))}
+            ref={rankInputRef}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={rankInput}
+            onChange={(e) => setRankInput(e.target.value.replace(/\D/g, ''))}
+            onFocus={handleRankFocus}
+            onBlur={commitRank}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+            }}
             disabled={isRunning}
             className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-sm
               focus:outline-none focus:border-[#00C4B3]/50"
-            aria-label="당첨 순위"
+            aria-label={`당첨 순위 (1~${participantCount || '?'})`}
+            placeholder={isRegistered ? `1~${participantCount}` : '참가자 등록 필요'}
           />
         )}
       </fieldset>

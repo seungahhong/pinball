@@ -280,11 +280,24 @@ export class Renderer {
     const mmX = screenW - mmWidth - mmPadding;
     const mmY = mmPadding;
 
-    // Map world bounds
+    // Map world bounds — derive vertical extent from boundary walls so the
+    // minimap stays stable even when goalY moves (e.g., gravity reverse swaps
+    // goalY to the top of the map).
     const worldMinX = -10;
     const worldMaxX = 10;
-    const worldMinY = map.spawnArea.y - 2;
-    const worldMaxY = map.goalY + 2;
+    let worldMinY = map.spawnArea.y - 2;
+    let worldMaxY = map.goalY + 2;
+    for (const e of map.entities) {
+      if (e.shape === 'polyline' && e.vertices && e.vertices.length === 2) {
+        const dy = Math.abs(e.vertices[0][1] - e.vertices[1][1]);
+        if (dy > 20) {
+          for (const v of e.vertices) {
+            if (v[1] < worldMinY) worldMinY = v[1];
+            if (v[1] > worldMaxY) worldMaxY = v[1];
+          }
+        }
+      }
+    }
     const worldW = worldMaxX - worldMinX;
     const worldH = worldMaxY - worldMinY;
     const mmHeight = (mmWidth / worldW) * worldH;

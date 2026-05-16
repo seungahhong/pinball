@@ -23,6 +23,7 @@ export default function Home() {
   const [resultMessage, setResultMessage] = useState('');
   const [specialMode, setSpecialMode] = useState<SpecialMode>('none');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [registeredCount, setRegisteredCount] = useState(0);
 
   const {
     canvasRef,
@@ -52,6 +53,7 @@ export default function Home() {
     (index: number) => {
       setSelectedMapIndex(index);
       setMap(maps[index]);
+      setRegisteredCount(0);
     },
     [setMap],
   );
@@ -69,6 +71,7 @@ export default function Home() {
       setMarbles(marbleData);
       setEngineWinMode(winMode, customRank);
       setIsMenuOpen(false);
+      setRegisteredCount(participants.length);
     },
     [selectedMapIndex, setMap, setMarbles, setEngineWinMode, winMode, customRank],
   );
@@ -145,6 +148,7 @@ export default function Home() {
         gameState={gameState}
         winMode={winMode}
         customRank={customRank}
+        participantCount={registeredCount}
         selectedMapIndex={selectedMapIndex}
         switchEnabled={switchEnabled}
         obstacleEnabled={obstacleEnabled}
