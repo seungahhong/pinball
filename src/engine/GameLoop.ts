@@ -330,13 +330,19 @@ export class GameLoop {
       this.triggerSwitch();
     }
 
-    if (this.obstacleEnabled && now - this.lastObstacleTime > OBSTACLE_RANDOM_INTERVAL) {
+    // Under reversed gravity, slope undersides are shallow enough that a
+    // dynamic obstacle placed near a marble forms a multi-body pin trap
+    // (slope + obstacle) which the marble cannot escape — so suspend the
+    // dynamic obstacle system while gravity is reversed.
+    const dynamicObstaclesActive = this.obstacleEnabled && !this.isGravityReversed;
+
+    if (dynamicObstaclesActive && now - this.lastObstacleTime > OBSTACLE_RANDOM_INTERVAL) {
       this.lastObstacleTime = now + Math.random() * 3000;
       this.triggerObstacle();
     }
 
     // Goal proximity effects
-    if (this.switchEnabled || this.obstacleEnabled) {
+    if (this.switchEnabled || dynamicObstaclesActive) {
       const leader = this.marbleManager.getLeadMarble(this.map.goalY, this.isGravityReversed);
       if (leader) {
         const pos = this.physics.getMarblePosition(leader.physicsId);
@@ -348,7 +354,7 @@ export class GameLoop {
             if (this.switchEnabled && Math.random() < 0.005) {
               this.triggerSwitch();
             }
-            if (this.obstacleEnabled && Math.random() < 0.003) {
+            if (dynamicObstaclesActive && Math.random() < 0.003) {
               this.obstacleManager.spawnNearLeader(pos.x, pos.y);
             }
           }
@@ -431,10 +437,13 @@ export class GameLoop {
    *   - Position Y is flipped around the map center axis
    *   - Polyline vertex Ys are flipped then swapped (net: position moves, slope preserved)
    *   - Angles and angular velocities stay the same (flip+reverse = identity)
+   *   - Polyline endpoints that touched a wall are retracted inward so the
+   *     reoriented slope leaves a marble-sized gap at the wall corner.
    */
   private flipObstaclesKeepWalls(originalMap: MapData): MapEntity[] {
     const flipAxis = (originalMap.spawnArea.y + originalMap.goalY) / 2;
     const flipY = (y: number) => 2 * flipAxis - y;
+    const wallXs = this.getWallXs(originalMap);
 
     return originalMap.entities.map((entity) => {
       // Preserve boundary walls
@@ -457,7 +466,8 @@ export class GameLoop {
         // Flip Ys then swap order → slope direction preserved at new position
         const flippedYs = entity.vertices.map((v) => flipY(v[1]));
         const swappedYs = [...flippedYs].reverse();
-        result.vertices = entity.vertices.map((v, i) => [v[0], swappedYs[i]]);
+        const flipped = entity.vertices.map((v, i) => [v[0], swappedYs[i]] as [number, number]);
+        result.vertices = this.retractWallEndpoints(flipped, wallXs);
       }
 
       return result;
@@ -468,17 +478,33 @@ export class GameLoop {
    * Reverse obstacle slopes/angles without changing positions.
    * Polyline Y-values are swapped between vertices — this reverses the slope
    * while keeping X anchored (wall connections preserved).
+   * Polyline endpoints that touched a wall are retracted inward so the
+   * reversed slope leaves a marble-sized gap at the wall corner (otherwise
+   * marbles get trapped in the wedge under reversed gravity).
    * Box angles are negated. Kinematic angular velocities are negated.
    */
   private reverseObstacleDirections(map: MapData): MapEntity[] {
+    const wallXs = this.getWallXs(map);
+
     return map.entities.map((entity) => {
+      // Preserve boundary walls themselves
+      if (entity.shape === 'polyline' && entity.vertices && entity.vertices.length === 2) {
+        const [v1, v2] = entity.vertices;
+        const dy = Math.abs(v1[1] - v2[1]);
+        const maxVertY = Math.max(v1[1], v2[1]);
+        if (dy > 20 || (dy < 1 && maxVertY > map.goalY * 0.8)) {
+          return entity;
+        }
+      }
+
       const reversed: MapEntity = { ...entity };
 
       // Swap Y values between polyline vertices to reverse slope
       if (entity.shape === 'polyline' && entity.vertices && entity.vertices.length >= 2) {
         const ys = entity.vertices.map((v) => v[1]);
         const swappedYs = [...ys].reverse();
-        reversed.vertices = entity.vertices.map((v, i) => [v[0], swappedYs[i]]);
+        const swapped = entity.vertices.map((v, i) => [v[0], swappedYs[i]] as [number, number]);
+        reversed.vertices = this.retractWallEndpoints(swapped, wallXs);
       }
 
       // Negate box angles
@@ -493,6 +519,51 @@ export class GameLoop {
 
       return reversed;
     });
+  }
+
+  /** Vertical-wall X coordinates (used to detect slope/wall corner touches). */
+  private getWallXs(map: MapData): number[] {
+    const xs: number[] = [];
+    for (const e of map.entities) {
+      if (e.shape !== 'polyline' || !e.vertices || e.vertices.length !== 2) continue;
+      const [v1, v2] = e.vertices;
+      if (Math.abs(v1[1] - v2[1]) > 20 && Math.abs(v1[0] - v2[0]) < 0.1) {
+        xs.push((v1[0] + v2[0]) / 2);
+      }
+    }
+    return xs;
+  }
+
+  /**
+   * Pull polyline endpoints that sit on a vertical wall inward along the slope
+   * so a marble (radius 0.5) can pass through the corner. Only the first/last
+   * vertices are considered (interior vertices can't form wall wedges).
+   */
+  private retractWallEndpoints(vertices: [number, number][], wallXs: number[]): [number, number][] {
+    if (vertices.length < 2 || wallXs.length === 0) return vertices;
+    const epsilon = 0.1;
+    const clearance = 1.5; // > marble diameter (1.0) for a comfortable gap
+    const result = vertices.map((v) => [...v] as [number, number]);
+
+    const retract = (idx: number, neighborIdx: number) => {
+      const v = result[idx];
+      const next = result[neighborIdx];
+      const wallX = wallXs.find((wx) => Math.abs(v[0] - wx) < epsilon);
+      if (wallX === undefined) return;
+      const dx = next[0] - v[0];
+      if (Math.abs(dx) < 0.001) return;
+      const inwardSign = Math.sign(dx);
+      const targetX = wallX + inwardSign * clearance;
+      // Parameter along segment to reach targetX; clamp to keep inside segment.
+      const t = Math.max(0, Math.min(1, (targetX - v[0]) / dx));
+      v[0] += dx * t;
+      v[1] += (next[1] - v[1]) * t;
+    };
+
+    retract(0, 1);
+    retract(result.length - 1, result.length - 2);
+
+    return result;
   }
 
   // Keep flipEntities for mapFlip feature (uses Y-axis position flip)
@@ -528,6 +599,10 @@ export class GameLoop {
     // 1. Reverse gravity
     this.isGravityReversed = true;
     this.physics.setGravity(0, -15);
+
+    // Clear any in-flight dynamic obstacles — leaving them in place can pin a
+    // marble against a now-shallow slope underside (see GameLoop.updateGameLogic).
+    this.obstacleManager?.clear();
 
     // 2. Reverse obstacle slopes/angles (walls preserved, only directions change)
     const reversedEntities = this.reverseObstacleDirections(this.map);
